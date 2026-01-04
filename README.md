@@ -53,7 +53,7 @@ Clone this repo into your Logseq graph directory:
 
 ```bash
 cd /path/to/your/logseq/graph
-git clone https://github.com/YOUR_USERNAME/logseq-to-obsidian.git .logseq-migration
+git clone https://github.com/alexandernacho/logseq-to-obsidian.git .logseq-migration
 cd .logseq-migration
 ```
 
