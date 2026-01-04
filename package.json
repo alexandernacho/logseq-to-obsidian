@@ -1,0 +1,28 @@
+{
+  "name": "logseq-to-obsidian",
+  "version": "1.0.0",
+  "description": "Migrate Logseq graphs to Obsidian vaults",
+  "bin": {
+    "logseq-to-obsidian": "./bin/logseq-to-obsidian.js"
+  },
+  "scripts": {
+    "test": "echo \"No tests yet\""
+  },
+  "keywords": [
+    "logseq",
+    "obsidian",
+    "migration",
+    "notes",
+    "markdown"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "files": [
+    "bin/",
+    "scripts/",
+    "references/"
+  ]
+}
