@@ -49,14 +49,27 @@ Your config is saved, so you can re-run or tweak settings later without answerin
 
 ### For Claude Code Users
 
-Just clone or copy this repo into your Logseq graph directory. Claude will detect the `SKILL.md` file automatically.
+Clone this repo into your Logseq graph directory:
 
 ```bash
 cd /path/to/your/logseq/graph
 git clone https://github.com/YOUR_USERNAME/logseq-to-obsidian.git .logseq-migration
+cd .logseq-migration
 ```
 
-Or install globally if you want CLI access too:
+Then start Claude Code from the cloned directory:
+
+```bash
+claude
+```
+
+And ask Claude to migrate:
+
+> "Migrate this graph to Obsidian"
+
+Claude will automatically discover and use the `logseq-to-obsidian` skill.
+
+**Alternative: Install globally for CLI access:**
 
 ```bash
 npm install -g logseq-to-obsidian

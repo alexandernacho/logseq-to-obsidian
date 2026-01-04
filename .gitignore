@@ -1,7 +1,9 @@
 node_modules/
 *.log
 .DS_Store
+# Claude Code prompts (skills in .claude/skills/ ARE committed)
 @/.prompts
+.claude/prompts/
 __pycache__/
 *.pyc
 .env
