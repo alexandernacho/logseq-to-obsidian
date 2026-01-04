@@ -43,19 +43,21 @@ If using existing config, skip to Step 4.
 
 Based on analysis, ask ONLY the questions that matter. Skip questions for features not detected.
 
-**Always ask:**
-- Output folder location (default: `../obsidian-vault`)
-- "Keep all bullets or flatten top-level to paragraphs?" (recommend flatten for document-like notes)
+**IMPORTANT: The AskUserQuestion tool has a maximum of 4 questions per call.** If you have more than 4 questions, ask in multiple rounds. Never skip questions.
 
-**Ask if detected:**
+#### Round 1 — Core questions (always ask)
+1. Output folder location (default: `../obsidian-vault`)
+2. "Keep all bullets or flatten top-level to paragraphs?" (recommend flatten for document-like notes)
+3. "Place pages in vault root or in a `pages/` subfolder?" (root is cleaner)
+4. "Organize pages by parent?" (pages linked from only one parent get nested under that parent's folder)
+
+#### Round 2 — Conditional questions (ask if detected, in a second AskUserQuestion call)
 - **Namespaces found** → "Convert `Parent/Child` pages to folder hierarchy?"
 - **Block references found** → "Flag block refs for manual fix, or remove?"
 
-**Always ask (improves organization):**
-- "Organize pages by parent? (Pages linked from only one parent get nested under that parent's folder)"
-- "Place pages in vault root or in a `pages/` subfolder?" (root is cleaner, `pages/` keeps original structure)
+If no conditional questions are needed, skip Round 2.
 
-**Use defaults (don't ask):**
+#### Automatic defaults (never ask)
 - Journals → `Daily/` folder, `YYYY-MM-DD.md` format
 - Properties → YAML frontmatter
 - Admonitions → Obsidian callouts
