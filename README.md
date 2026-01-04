@@ -88,6 +88,7 @@ After running with Claude Code, your preferences are saved to `.logseq-to-obsidi
     "flattenTopLevel": false,
     "namespacesToFolders": false,
     "organizeByParent": false,
+    "pagesInRoot": false,
     "blockRefs": "flag",
     "journalsFolder": "Daily"
   }
@@ -148,6 +149,7 @@ logseq-to-obsidian ~/logseq ~/obsidian \
 | `--journals-folder` | Folder name for daily notes | `Daily` |
 | `--namespaces-to-folders` | Convert `A/B` pages to folder hierarchy | Off |
 | `--organize-by-parent` | Nest pages under their parent page's folder | Off |
+| `--pages-in-root` | Place pages in vault root instead of `pages/` folder | Off |
 | `--block-refs [flag\|remove]` | How to handle block references | `flag` |
 | `--verbose`, `-v` | Show detailed progress | Off |
 

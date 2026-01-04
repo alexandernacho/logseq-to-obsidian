@@ -49,6 +49,7 @@ class LogseqMigrator:
         flatten_top_level: bool = False,
         namespaces_to_folders: bool = False,
         organize_by_parent: bool = False,
+        pages_in_root: bool = False,
         block_refs_mode: str = "flag",  # flag, remove
         dry_run: bool = False,
         verbose: bool = False,
@@ -59,6 +60,7 @@ class LogseqMigrator:
         self.flatten_top_level = flatten_top_level
         self.namespaces_to_folders = namespaces_to_folders
         self.organize_by_parent = organize_by_parent
+        self.pages_in_root = pages_in_root
         self.block_refs_mode = block_refs_mode
         self.dry_run = dry_run
         self.verbose = verbose
@@ -538,6 +540,9 @@ class LogseqMigrator:
         pages_dir = self.source / "pages"
         if pages_dir.exists():
             self.log(f"Processing pages...")
+            # Determine base output directory for pages
+            pages_output_base = self.output if self.pages_in_root else self.output / "pages"
+
             for source_file in pages_dir.glob("*.md"):
                 page_name = self.filename_to_page_name(source_file.name)
 
@@ -545,12 +550,12 @@ class LogseqMigrator:
                 if self.organize_by_parent and page_name in self.page_new_paths:
                     new_path = self.page_new_paths[page_name]
                     # Convert path to filename-safe format
-                    dest_file = self.output / "pages" / f"{new_path}.md"
+                    dest_file = pages_output_base / f"{new_path}.md"
                 elif self.namespaces_to_folders:
                     dest_name = self.process_namespace_path(source_file.name)
-                    dest_file = self.output / "pages" / dest_name
+                    dest_file = pages_output_base / dest_name
                 else:
-                    dest_file = self.output / "pages" / source_file.name
+                    dest_file = pages_output_base / source_file.name
 
                 self.convert_file(source_file, dest_file)
         
@@ -612,6 +617,7 @@ def config_to_migrator_args(config: dict) -> dict:
         'flatten_top_level': prefs.get('flattenTopLevel', False),
         'namespaces_to_folders': prefs.get('namespacesToFolders', False),
         'organize_by_parent': prefs.get('organizeByParent', False),
+        'pages_in_root': prefs.get('pagesInRoot', False),
         'block_refs_mode': prefs.get('blockRefs', 'flag'),
     }
 
@@ -709,6 +715,7 @@ Examples:
     parser.add_argument("--flatten-top-level", action="store_true", help="Convert top-level bullets to paragraphs")
     parser.add_argument("--namespaces-to-folders", action="store_true", help="Convert namespace pages to folder hierarchy")
     parser.add_argument("--organize-by-parent", action="store_true", help="Organize pages into folders based on parent-child link relationships")
+    parser.add_argument("--pages-in-root", action="store_true", help="Place pages in vault root instead of pages/ folder")
     parser.add_argument("--block-refs", choices=["flag", "remove"], default="flag", help="How to handle block references (default: flag)")
     parser.add_argument("--verbose", "-v", action="store_true", help="Show detailed progress")
     parser.add_argument("--samples", type=int, default=2, help="Number of sample files to show in dry-run (default: 2)")
@@ -755,6 +762,7 @@ Examples:
             'flatten_top_level': args.flatten_top_level,
             'namespaces_to_folders': args.namespaces_to_folders,
             'organize_by_parent': args.organize_by_parent,
+            'pages_in_root': args.pages_in_root,
             'block_refs_mode': args.block_refs,
             'dry_run': args.dry_run,
             'verbose': args.verbose,
