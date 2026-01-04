@@ -87,6 +87,7 @@ After running with Claude Code, your preferences are saved to `.logseq-to-obsidi
   "preferences": {
     "flattenTopLevel": false,
     "namespacesToFolders": false,
+    "organizeByParent": false,
     "blockRefs": "flag",
     "journalsFolder": "Daily"
   }
@@ -146,8 +147,32 @@ logseq-to-obsidian ~/logseq ~/obsidian \
 | `--flatten` | Convert top-level bullets to paragraphs | Off |
 | `--journals-folder` | Folder name for daily notes | `Daily` |
 | `--namespaces-to-folders` | Convert `A/B` pages to folder hierarchy | Off |
+| `--organize-by-parent` | Nest pages under their parent page's folder | Off |
 | `--block-refs [flag\|remove]` | How to handle block references | `flag` |
 | `--verbose`, `-v` | Show detailed progress | Off |
+
+### Organizing Pages by Parent
+
+The `--organize-by-parent` flag creates a folder hierarchy based on link relationships. Pages that are only linked from one "parent" page get nested under that parent:
+
+```
+Before (flat):
+pages/
+  Project Alpha.md
+  Meeting Notes.md         ← only linked from "Project Alpha"
+  Research.md    ← only linked from "Project Alpha"
+  Ideas.md
+
+After (organized):
+pages/
+  Project Alpha/
+    Project Alpha.md
+    Meeting Notes.md
+    Research.md
+  Ideas.md
+```
+
+This makes the sidebar much cleaner by hiding contextual pages under their parent. Pages linked from multiple places stay at the top level.
 
 ## Opening in Obsidian
 
@@ -157,6 +182,15 @@ After migration:
 2. Click **"Open folder as vault"**
 3. Select your output folder
 4. Done!
+
+### Enabling Linked References
+
+Logseq shows linked references inline at the bottom of every page. To get similar behavior in Obsidian:
+
+1. Go to **Settings → Core plugins → Backlinks**
+2. Enable **"Backlinks in document"**
+
+This displays backlinks at the bottom of each note, making it easy to see which pages reference the current page—just like in Logseq.
 
 ### Recommended Plugins
 

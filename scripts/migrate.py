@@ -48,6 +48,7 @@ class LogseqMigrator:
         journals_folder: str = "Daily",
         flatten_top_level: bool = False,
         namespaces_to_folders: bool = False,
+        organize_by_parent: bool = False,
         block_refs_mode: str = "flag",  # flag, remove
         dry_run: bool = False,
         verbose: bool = False,
@@ -57,10 +58,11 @@ class LogseqMigrator:
         self.journals_folder = journals_folder
         self.flatten_top_level = flatten_top_level
         self.namespaces_to_folders = namespaces_to_folders
+        self.organize_by_parent = organize_by_parent
         self.block_refs_mode = block_refs_mode
         self.dry_run = dry_run
         self.verbose = verbose
-        
+
         self.stats = {
             "files_processed": 0,
             "files_skipped": 0,
@@ -68,12 +70,18 @@ class LogseqMigrator:
             "admonitions_converted": 0,
             "block_refs_flagged": 0,
             "tasks_converted": 0,
+            "pages_reorganized": 0,
             "errors": [],
             "warnings": [],
         }
-        
+
         # Build block ID to page mapping for block references
         self.block_id_map = {}
+
+        # Link graph for parent-child organization
+        self.link_graph = {}  # page -> set of pages it links to
+        self.incoming_links = {}  # page -> set of pages that link to it
+        self.page_new_paths = {}  # original page name -> new relative path
     
     def log(self, message: str, level: str = "info"):
         """Log a message if verbose mode is on."""
@@ -373,31 +381,177 @@ class LogseqMigrator:
         """Convert namespace filename to folder path if enabled."""
         # Decode URL-encoded slashes
         decoded = filename.replace("%2F", "/").replace("%2f", "/")
-        
+
         if self.namespaces_to_folders and "/" in decoded:
             # Split into path components
             parts = decoded.rsplit(".", 1)  # Separate extension
             if len(parts) == 2:
                 path_parts = parts[0].split("/")
                 return Path("/".join(path_parts[:-1])) / f"{path_parts[-1]}.{parts[1]}"
-        
+
         # Just clean up the filename
         return Path(decoded.replace("/", "-"))
-    
+
+    def extract_links(self, content: str) -> set:
+        """Extract all [[wiki links]] from content."""
+        # Match [[Page Name]] or [[Page Name|alias]]
+        pattern = r'\[\[([^\]|]+)(?:\|[^\]]+)?\]\]'
+        matches = re.findall(pattern, content)
+        return set(matches)
+
+    def filename_to_page_name(self, filename: str) -> str:
+        """Convert filename to page name (remove .md, decode URL encoding)."""
+        name = filename.replace(".md", "")
+        # Decode URL-encoded characters
+        name = name.replace("%2F", "/").replace("%2f", "/")
+        return name
+
+    def page_name_to_filename(self, page_name: str) -> str:
+        """Convert page name to filename."""
+        # Handle namespace encoding
+        filename = page_name.replace("/", "%2F")
+        return f"{filename}.md"
+
+    def build_link_graph(self):
+        """Build a graph of page links by scanning all pages."""
+        pages_dir = self.source / "pages"
+        if not pages_dir.exists():
+            return
+
+        self.log("Building link graph...")
+
+        # First pass: collect all page names
+        all_pages = set()
+        for source_file in pages_dir.glob("*.md"):
+            page_name = self.filename_to_page_name(source_file.name)
+            all_pages.add(page_name)
+            self.link_graph[page_name] = set()
+            self.incoming_links[page_name] = set()
+
+        # Second pass: extract links and build graph
+        for source_file in pages_dir.glob("*.md"):
+            page_name = self.filename_to_page_name(source_file.name)
+            try:
+                content = source_file.read_text(encoding="utf-8")
+                links = self.extract_links(content)
+
+                for linked_page in links:
+                    # Only track links to pages that exist
+                    if linked_page in all_pages:
+                        self.link_graph[page_name].add(linked_page)
+                        self.incoming_links[linked_page].add(page_name)
+            except Exception as e:
+                self.log(f"Error reading {source_file}: {e}", "warning")
+
+        self.log(f"Found {len(all_pages)} pages with {sum(len(v) for v in self.link_graph.values())} links")
+
+    def compute_parent_child_structure(self) -> dict:
+        """
+        Determine folder structure based on parent-child relationships.
+        A page is a "child" if it has exactly one incoming link (one parent).
+        Returns: dict mapping page_name -> parent_page_name (or None for top-level)
+        """
+        parent_map = {}
+
+        for page_name, incoming in self.incoming_links.items():
+            if len(incoming) == 1:
+                # This page has exactly one parent
+                parent = list(incoming)[0]
+                parent_map[page_name] = parent
+            else:
+                # Top-level page (0 or multiple incoming links)
+                parent_map[page_name] = None
+
+        return parent_map
+
+    def build_folder_structure(self, parent_map: dict) -> dict:
+        """
+        Build the new folder paths for each page based on parent relationships.
+        Returns: dict mapping page_name -> new relative path (within pages/)
+        """
+        new_paths = {}
+
+        def get_path(page_name: str, visited: set = None) -> Path:
+            """Recursively build path for a page."""
+            if visited is None:
+                visited = set()
+
+            # Prevent infinite loops
+            if page_name in visited:
+                return Path(page_name)
+            visited.add(page_name)
+
+            parent = parent_map.get(page_name)
+            if parent is None:
+                # Top-level page
+                return Path(page_name)
+            else:
+                # Nested under parent
+                parent_path = get_path(parent, visited)
+                # The parent becomes a folder, child goes inside
+                return parent_path / page_name
+
+        for page_name in parent_map:
+            path = get_path(page_name)
+            new_paths[page_name] = path
+
+        return new_paths
+
+    def update_links_in_content(self, content: str, current_page_path: Path) -> str:
+        """Update wiki links to account for new folder structure."""
+        if not self.page_new_paths:
+            return content
+
+        def replace_link(match):
+            full_match = match.group(0)
+            page_name = match.group(1)
+            alias = match.group(2) if match.lastindex >= 2 else None
+
+            # If page was reorganized, we might need to update the link
+            # In Obsidian, [[Page Name]] still works regardless of folder
+            # But we keep the link as-is since Obsidian resolves by name
+            return full_match
+
+        # For now, Obsidian handles links by page name, so no update needed
+        # Links like [[Page Name]] work regardless of folder structure
+        return content
+
     def migrate(self) -> dict:
         """Run the full migration."""
         self.log(f"Starting migration from {self.source} to {self.output}")
-        
+
         if not self.dry_run:
             self.output.mkdir(parents=True, exist_ok=True)
-        
+
+        # Build link graph if organizing by parent
+        if self.organize_by_parent:
+            self.build_link_graph()
+            parent_map = self.compute_parent_child_structure()
+            self.page_new_paths = self.build_folder_structure(parent_map)
+
+            # Count reorganized pages
+            reorganized = sum(1 for p in parent_map.values() if p is not None)
+            self.stats["pages_reorganized"] = reorganized
+            self.log(f"Will reorganize {reorganized} pages into parent folders")
+
         # Process pages
         pages_dir = self.source / "pages"
         if pages_dir.exists():
             self.log(f"Processing pages...")
             for source_file in pages_dir.glob("*.md"):
-                dest_name = self.process_namespace_path(source_file.name)
-                dest_file = self.output / "pages" / dest_name
+                page_name = self.filename_to_page_name(source_file.name)
+
+                # Determine destination path
+                if self.organize_by_parent and page_name in self.page_new_paths:
+                    new_path = self.page_new_paths[page_name]
+                    # Convert path to filename-safe format
+                    dest_file = self.output / "pages" / f"{new_path}.md"
+                elif self.namespaces_to_folders:
+                    dest_name = self.process_namespace_path(source_file.name)
+                    dest_file = self.output / "pages" / dest_name
+                else:
+                    dest_file = self.output / "pages" / source_file.name
+
                 self.convert_file(source_file, dest_file)
         
         # Process journals
@@ -457,6 +611,7 @@ def config_to_migrator_args(config: dict) -> dict:
         'journals_folder': prefs.get('journalsFolder', 'Daily'),
         'flatten_top_level': prefs.get('flattenTopLevel', False),
         'namespaces_to_folders': prefs.get('namespacesToFolders', False),
+        'organize_by_parent': prefs.get('organizeByParent', False),
         'block_refs_mode': prefs.get('blockRefs', 'flag'),
     }
 
@@ -553,6 +708,7 @@ Examples:
     parser.add_argument("--journals-folder", default="Daily", help="Folder name for journals (default: Daily)")
     parser.add_argument("--flatten-top-level", action="store_true", help="Convert top-level bullets to paragraphs")
     parser.add_argument("--namespaces-to-folders", action="store_true", help="Convert namespace pages to folder hierarchy")
+    parser.add_argument("--organize-by-parent", action="store_true", help="Organize pages into folders based on parent-child link relationships")
     parser.add_argument("--block-refs", choices=["flag", "remove"], default="flag", help="How to handle block references (default: flag)")
     parser.add_argument("--verbose", "-v", action="store_true", help="Show detailed progress")
     parser.add_argument("--samples", type=int, default=2, help="Number of sample files to show in dry-run (default: 2)")
@@ -598,6 +754,7 @@ Examples:
             'journals_folder': args.journals_folder,
             'flatten_top_level': args.flatten_top_level,
             'namespaces_to_folders': args.namespaces_to_folders,
+            'organize_by_parent': args.organize_by_parent,
             'block_refs_mode': args.block_refs,
             'dry_run': args.dry_run,
             'verbose': args.verbose,
@@ -629,6 +786,8 @@ Examples:
     print(f"Admonitions converted:{stats['admonitions_converted']}")
     print(f"Block refs flagged:   {stats['block_refs_flagged']}")
     print(f"Tasks converted:      {stats['tasks_converted']}")
+    if stats.get('pages_reorganized', 0) > 0:
+        print(f"Pages reorganized:    {stats['pages_reorganized']}")
     
     if stats["errors"]:
         print(f"\n❌ Errors ({len(stats['errors'])}):")
