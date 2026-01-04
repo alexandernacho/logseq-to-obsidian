@@ -51,6 +51,9 @@ Based on analysis, ask ONLY the questions that matter. Skip questions for featur
 - **Namespaces found** → "Convert `Parent/Child` pages to folder hierarchy?"
 - **Block references found** → "Flag block refs for manual fix, or remove?"
 
+**Always ask (improves organization):**
+- "Organize pages by parent? (Pages linked from only one parent get nested under that parent's folder)"
+
 **Use defaults (don't ask):**
 - Journals → `Daily/` folder, `YYYY-MM-DD.md` format
 - Properties → YAML frontmatter
@@ -75,6 +78,7 @@ Then use the Write tool to create `/path/to/logseq/graph/.logseq-to-obsidian/con
   "preferences": {
     "flattenTopLevel": false,
     "namespacesToFolders": false,
+    "organizeByParent": false,
     "blockRefs": "flag",
     "journalsFolder": "Daily"
   }
@@ -140,6 +144,7 @@ The config file is stored at `.logseq-to-obsidian/config.json` in the Logseq gra
   "preferences": {
     "flattenTopLevel": false,
     "namespacesToFolders": false,
+    "organizeByParent": false,
     "blockRefs": "flag",
     "journalsFolder": "Daily"
   }
@@ -155,6 +160,7 @@ The config file is stored at `.logseq-to-obsidian/config.json` in the Logseq gra
 | `output` | string | Yes | - | Absolute path to output Obsidian vault |
 | `preferences.flattenTopLevel` | boolean | No | `false` | Convert top-level bullets to paragraphs |
 | `preferences.namespacesToFolders` | boolean | No | `false` | Convert `A/B` pages to folder hierarchy |
+| `preferences.organizeByParent` | boolean | No | `false` | Nest pages under their parent's folder (pages with exactly 1 incoming link) |
 | `preferences.blockRefs` | string | No | `"flag"` | `"flag"` or `"remove"` |
 | `preferences.journalsFolder` | string | No | `"Daily"` | Folder name for journal files |
 
@@ -202,5 +208,6 @@ CLI mode options:
 - `--journals-folder NAME`: Journal folder name (default: "Daily")
 - `--flatten-top-level`: Convert top-level bullets to paragraphs
 - `--namespaces-to-folders`: Convert `A/B` pages to `A/B.md` in folders
+- `--organize-by-parent`: Nest pages under their parent's folder (pages linked from exactly one parent)
 - `--block-refs [flag|remove]`: How to handle block references (default: flag)
 - `--verbose`: Show detailed progress
