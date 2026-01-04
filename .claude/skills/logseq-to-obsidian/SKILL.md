@@ -48,8 +48,8 @@ Based on analysis, ask ONLY the questions that matter. Skip questions for featur
 #### Round 1 — Core questions (always ask)
 1. Output folder location (default: `../obsidian-vault`)
 2. "Keep all bullets or flatten top-level to paragraphs?" (recommend flatten for document-like notes)
-3. "Place pages in vault root or in a `pages/` subfolder?" (root is cleaner)
-4. "Organize pages by parent?" (pages linked from only one parent get nested under that parent's folder)
+3. "Place pages in vault root or in a `pages/` subfolder?" (recommend root — cleaner structure)
+4. "Organize pages by parent?" (recommend yes — pages linked from only one parent get nested, reducing sidebar clutter)
 
 #### Round 2 — Conditional questions (ask if detected, in a second AskUserQuestion call)
 - **Namespaces found** → "Convert `Parent/Child` pages to folder hierarchy?"
